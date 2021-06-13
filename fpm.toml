@@ -1,0 +1,29 @@
+name = "ferror"
+version = "1.3.1"
+license = "GNU General Public License v3.0"
+author = "Jason Christopherson, Renato Zimmermann"
+maintainer = "jchristopherson@hotmail.com, renato.zimmermann@mail.utoronto.ca"
+copyright = "Copyright 2021 Jason Christopherson, Renato Zimmermann" 
+
+[build]
+auto-executables = false
+auto-tests = true
+auto-examples = true
+
+[library]
+source-dir = "src"
+
+[[test]]
+name="basic_tests"
+source-dir="test"
+main="ferror_test.f90"
+
+[[example]]
+name="example-1"
+source-dir="examples"
+main="ferror_example_1.f90"
+
+[[example]]
+name="example-2"
+source-dir="examples"
+main="ferror_example_2.f90"

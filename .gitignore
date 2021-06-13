@@ -19,6 +19,7 @@
 # Fortran module files
 *.mod
 *.smod
+./**/*.mod
 
 # Compiled Static libraries
 *.lai
@@ -36,17 +37,6 @@ bin/
 build/
 latex/
 lib/
-
-# CMake Stuff
-*.json
-CMakeCache.txt
-CMakeFiles
-CMakeScripts
-Testing
-Makefile
-cmake_install.cmake
-install_manifest.txt
-CTestTestfile.cmake
 
 # Misc. Stuff
 error_log.txt
