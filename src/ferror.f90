@@ -142,6 +142,9 @@ module ferror
     use, intrinsic :: iso_fortran_env, only : int32
     implicit none
     private
+
+    integer, parameter :: META_ERROR = 900
+
     public :: errors
     public :: error_callback
 
@@ -160,18 +163,32 @@ module ferror
         integer(int32) :: m_errorFlag = 0
         !> The warning flag.
         integer(int32) :: m_warningFlag = 0
+        !> The flag used in a timeout.
+        integer(int32) :: m_timeoutFlag = 0
         !> Terminate the application on error.
         logical :: m_exitOnError = .true.
+        !> Whether a timeout counts as an error or a warning.
+        logical :: m_timeoutIsError = .true.
         !> Suppress printing of error and warning messages.
         logical :: m_suppressPrinting = .false.
+        !> Threshold which, if passed, will cause a timeout.
+        real :: m_timeoutThreshold
+        !> CPU time of call to the start() method.
+        real :: m_startTime
+        !> CPU time of last call to the check_timeout() method.
+        real :: m_lastCheckTime
         !> The error message.
         character(len = :), allocatable :: m_errorMessage
         !> The warning message.
         character(len = :), allocatable :: m_warningMessage
+        !> The timeout message.
+        character(len = :), allocatable :: m_timeoutMessage
         !> The function where the error occurred.
         character(len = :), allocatable :: m_eFunName
         !> The function where the warning occurred.
         character(len = :), allocatable :: m_wFunName
+        !> The function where the timeout occurred.
+        character(len = :), allocatable :: m_tFunName
         !> A pointer to a routine that can be called upon notice of an error.
         procedure(error_callback), pointer, pass :: m_errCleanUp => null()
     contains
@@ -185,7 +202,7 @@ module ferror
         procedure, public :: report_warning => er_report_warning
         !> @brief Writes an error log file.
         procedure, public :: log_error => er_log_error
-        !> @brief Tests to see if an error has been encountered.
+        !> @brief Checks if a timeout has occured and reports it.
         procedure, public :: has_error_occurred => er_has_error_occurred
         !> @brief Resets the error status flag to false.
         procedure, public :: reset_error_status => er_reset_error_status
@@ -193,16 +210,37 @@ module ferror
         procedure, public :: has_warning_occurred => er_has_warning_occurred
         !> @brief Resets the warning status flag to false.
         procedure, public :: reset_warning_status => er_reset_warning_status
+        !> @brief Sets the start_time to now.
+        procedure, public :: start_timing => er_start_timing
+        !> @brief Tests to see if a timeout has been encountered.
+        procedure, public :: ckeck_timeout => er_check_timeout
+        !> @brief Resets the start_time and last_check_time values to -1.0
+        procedure, public :: reset_timeout => er_reset_timeout
         !> @brief Gets the current error flag.
         procedure, public :: get_error_flag => er_get_error_flag
         !> @brief Gets the current warning flag.
         procedure, public :: get_warning_flag => er_get_warning_flag
+        !> @brief Gets the current timeout flag.
+        procedure, public :: get_timeout_flag => er_get_timeout_flag
+        !> @brief Sets the current timeout flag.
+        procedure, public :: set_timeout_flag => er_set_timeout_flag
+        !> @brief Gets the current timeout threshold.
+        procedure, public :: get_timeout_threshold => er_get_timeout_threshold
+        !> @brief Sets the current timeout threshold.
+        procedure, public :: set_timeout_threshold => er_set_timeout_threshold
         !> @brief Gets a logical value determining if the application should be
         !! terminated when an error is encountered.
         procedure, public :: get_exit_on_error => er_get_exit_on_error
         !> @brief Sets a logical value determining if the application should be
         !! terminated when an error is encountered.
         procedure, public :: set_exit_on_error => er_set_exit_on_error
+        !> @brief Gets a logical value determining if the application should
+        !! throw an error if a timeout happens.
+        procedure, public :: get_timeout_is_error => er_get_timeout_is_error
+        !> @brief Sets a logical value determining if the application should
+        !! throw an error if a timeout happens. If set to false, a warning 
+        !! is reported.
+        procedure, public :: set_timeout_is_error => er_set_timeout_is_error
         !> @brief Gets a logical value determining if printing of error and 
         !! warning messages should be suppressed.
         procedure, public :: get_suppress_printing => er_get_suppress_printing
@@ -470,6 +508,81 @@ contains
     end subroutine
 
 ! ------------------------------------------------------------------------------
+    !> @brief Set the starting time of a task.
+    !!
+    !! @param[in] this The errors object.
+    subroutine er_start_timing(this, fcn)
+        class(errors), intent(inout) :: this
+        character(len=*), intent(in) :: fcn
+
+        real :: now
+        integer :: n
+
+        call this%reset_timeout()
+
+        call cpu_time(now)
+
+        n = len(fcn)
+        if (allocated(this%m_eFunName)) deallocate(this%m_eFunName)
+        allocate(character(len = n) :: this%m_tFunName)
+        this%m_tFunName = fcn(1:n)
+
+        this%m_startTime = now
+        this%m_lastCheckTime = now
+    end subroutine
+
+! ------------------------------------------------------------------------------
+    !> @brief Tests to see if a timout has been encountered. Sets this occurance
+    !! as either a warning or error depending on object settings. If no timeout
+    !! updates the last_check_time attribute.
+    !!
+    !! @param[in] this The errors object.
+    subroutine er_check_timeout(this)
+        class(errors), intent(inout) :: this
+        real :: now
+
+        if (this%m_startTime < 0) call this%report_error(&
+            this%m_tFunName, &
+            "ferror Error: please start a timing before checking &
+            &for a timeout", &
+            META_ERROR + 10 &
+        ) ! Create a propper timeout flag
+
+        call cpu_time(now)
+
+        if ((now - this%m_startTime) > this%m_timeoutThreshold) then
+            if (this%m_timeoutIsError) then
+                call this%report_error(&
+                    this%m_tFunName, &
+                    "Function Timeout.", &
+                    this%m_timeoutFlag &
+                ) ! Create a propper timeout flag
+            else
+                call this%report_warning(&
+                    this%m_tFunName, &
+                    "Function Timeout.", &
+                    this%m_timeoutFlag &
+                ) ! Create a propper timeout flag
+            end if
+        end if
+
+        this%m_lastCheckTime = now
+
+    end subroutine
+    
+! ------------------------------------------------------------------------------
+    !> @brief Resets the start and last_check times to zero.
+    !!
+    !! @param[in,out] this The errors object.
+    subroutine er_reset_timeout(this)
+        class(errors), intent(inout) :: this
+
+        if (allocated(this%m_tFunName)) deallocate(this%m_tFunName)
+        this%m_startTime = -1.0
+        this%m_lastCheckTime = -1.0
+    end subroutine
+
+! ------------------------------------------------------------------------------
     !> @brief Gets the current error flag.
     !!
     !! @param[in] this The errors object.
@@ -490,6 +603,50 @@ contains
         integer(int32) :: x
         x = this%m_warningFlag
     end function
+
+! ------------------------------------------------------------------------------
+    !> @brief Gets the current timeout flag.
+    !!
+    !! @param[in] this The errors object.
+    !! @return The current timeout flag.
+    pure function er_get_timeout_flag(this) result(x)
+        class(errors), intent(in) :: this
+        integer(int32) :: x
+        x = this%m_timeoutFlag
+    end function
+    
+! ------------------------------------------------------------------------------
+    !> @brief Sets the current timeout flag.
+    !!
+    !! @param[in] this The errors object.
+    !! @return The current timeout flag.
+    subroutine er_set_timeout_flag(this, x)
+        class(errors), intent(inout) :: this
+        integer(int32) :: x
+        this%m_timeoutFlag = x
+    end subroutine
+    
+! ------------------------------------------------------------------------------
+    !> @brief Gets the current timeout threshold.
+    !!
+    !! @param[in] this The errors object.
+    !! @return The current timeout threshold.
+    pure function er_get_timeout_threshold(this) result(x)
+        class(errors), intent(in) :: this
+        real :: x
+        x = this%m_timeoutThreshold
+    end function
+    
+! ------------------------------------------------------------------------------
+    !> @brief Sets the current timeout threshold.
+    !!
+    !! @param[in] this The errors object.
+    !! @return The current timeout threshold.
+    subroutine er_set_timeout_threshold(this, x)
+        class(errors), intent(inout) :: this
+        real :: x
+        this%m_timeoutThreshold = x
+    end subroutine
     
 ! ------------------------------------------------------------------------------
     !> @brief Gets a logical value determining if the application should be
@@ -515,6 +672,32 @@ contains
         class(errors), intent(inout) :: this
         logical, intent(in) :: x
         this%m_exitOnError = x
+    end subroutine
+
+! ------------------------------------------------------------------------------
+    !> @brief Gets a logical value determining if the application should 
+    !! throw an error in case of a timeout
+    !!
+    !! @param[in] this The errors object.
+    !! @return Returns true if the application should throw an error at 
+    !! timeout; else, false.
+    pure function er_get_timeout_is_error(this) result(x)
+        class(errors), intent(in) :: this
+        logical :: x
+        x = this%m_timeoutIsError
+    end function
+
+! ------------------------------------------------------------------------------
+    !> @brief Sets a logical value determining if the application should
+    !! throw an error in case of a timeout
+    !!
+    !! @param[in,out] this The errors object.
+    !! @param[in] x Set to true if the application should report an error when 
+    !! an timeout happens; else, false.
+    subroutine er_set_timeout_is_error(this, x)
+        class(errors), intent(inout) :: this
+        logical, intent(in) :: x
+        this%m_timeoutIsError = x
     end subroutine
 
 ! ------------------------------------------------------------------------------

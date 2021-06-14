@@ -25,6 +25,9 @@ program main
     test_result = test_warning_reset()
     if (.not.test_result) overall = .false.
 
+    test_result = test_timeout()
+    if (.not.test_result) overall = .false.
+
     test_result = test_error_callback()
     if (.not.test_result) overall = .false.
 
@@ -217,6 +220,49 @@ contains
             print '(A)', "Expected the warning message to be reset."
         end if
     end function
+
+! ------------------------------------------------------------------------------
+    function test_timeout() result(rst)
+        ! Local Variables
+        logical :: rst
+        type(errors) :: obj
+
+        ! Initialization
+        rst = .true.
+
+        ! Don't print the warning message to the command line
+        call obj%set_suppress_printing(.true.)
+
+        ! Timeout is warning.
+        call obj%set_timeout_is_error(.false.)
+
+        call obj%set_timeout_flag(200)
+        call obj%set_timeout_threshold(0.01)
+
+        ! Start the timing
+        call obj%start_timing("test_timeout")
+        call burn_time()
+        
+        call obj%ckeck_timeout()
+
+        ! Ensure the warning was made
+        if (.not.obj%has_warning_occurred()) then
+            rst = .false.
+            print '(A)', "Expected the timeout to have been recorded."
+        end if
+    end function
+
+! ******************************************************************************
+! BURN TIME ROUTINE
+! ------------------------------------------------------------------------------
+    subroutine burn_time()
+        real :: x
+        integer :: i
+
+        do i=1, 10000000
+            call random_number(x)
+        end do
+    end subroutine
 
 ! ------------------------------------------------------------------------------
     function test_error_callback() result(rst)
