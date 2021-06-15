@@ -593,7 +593,7 @@ contains
         class(errors), intent(inout) :: this
         logical :: x
 
-        x = (this%m_startTime < 0.0).and.(this%m_lastCheckTime < 0.0)
+        x = (this%m_startTime >= 0.0).and.(this%m_lastCheckTime >= 0.0)
     end function
 
 ! ------------------------------------------------------------------------------
