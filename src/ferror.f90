@@ -213,7 +213,7 @@ module ferror
         !> @brief Sets the start_time to now.
         procedure, public :: start_timing => er_start_timing
         !> @brief Tests to see if a timeout has been encountered.
-        procedure, public :: ckeck_timeout => er_check_timeout
+        procedure, public :: check_timeout => er_check_timeout
         !> @brief Resets the start_time and last_check_time values to -1.0
         procedure, public :: reset_timeout => er_reset_timeout
         !> @brief Resets the start_time and last_check_time values to -1.0
