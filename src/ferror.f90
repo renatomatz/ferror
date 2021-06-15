@@ -216,6 +216,8 @@ module ferror
         procedure, public :: ckeck_timeout => er_check_timeout
         !> @brief Resets the start_time and last_check_time values to -1.0
         procedure, public :: reset_timeout => er_reset_timeout
+        !> @brief Resets the start_time and last_check_time values to -1.0
+        procedure, public :: timeout_is_set => er_timeout_is_set
         !> @brief Gets the current error flag.
         procedure, public :: get_error_flag => er_get_error_flag
         !> @brief Gets the current warning flag.
@@ -511,21 +513,14 @@ contains
     !> @brief Set the starting time of a task.
     !!
     !! @param[in] this The errors object.
-    subroutine er_start_timing(this, fcn)
+    subroutine er_start_timing(this)
         class(errors), intent(inout) :: this
-        character(len=*), intent(in) :: fcn
 
         real :: now
-        integer :: n
 
         call this%reset_timeout()
 
         call cpu_time(now)
-
-        n = len(fcn)
-        if (allocated(this%m_eFunName)) deallocate(this%m_eFunName)
-        allocate(character(len = n) :: this%m_tFunName)
-        this%m_tFunName = fcn(1:n)
 
         this%m_startTime = now
         this%m_lastCheckTime = now
@@ -537,16 +532,24 @@ contains
     !! updates the last_check_time attribute.
     !!
     !! @param[in] this The errors object.
-    subroutine er_check_timeout(this)
+    subroutine er_check_timeout(this, fcn)
         class(errors), intent(inout) :: this
-        real :: now
+        character(len=*), intent(in) :: fcn
 
-        if (this%m_startTime < 0) call this%report_error(&
+        real :: now
+        integer :: n
+
+        if (.not.this%timeout_is_set()) call this%report_error(&
             this%m_tFunName, &
             "ferror Error: please start a timing before checking &
             &for a timeout", &
             META_ERROR + 10 &
         ) ! Create a propper timeout flag
+
+        n = len(fcn)
+        if (allocated(this%m_tFunName)) deallocate(this%m_tFunName)
+        allocate(character(len=n) :: this%m_tFunName)
+        this%m_tFunName = fcn(1:n)
 
         call cpu_time(now)
 
@@ -581,6 +584,17 @@ contains
         this%m_startTime = -1.0
         this%m_lastCheckTime = -1.0
     end subroutine
+    
+! ------------------------------------------------------------------------------
+    !> @brief Returns if the timeout is set up
+    !!
+    !! @param[in,out] this The errors object.
+    function er_timeout_is_set(this) result(x)
+        class(errors), intent(inout) :: this
+        logical :: x
+
+        x = (this%m_startTime < 0.0).and.(this%m_lastCheckTime < 0.0)
+    end function
 
 ! ------------------------------------------------------------------------------
     !> @brief Gets the current error flag.
