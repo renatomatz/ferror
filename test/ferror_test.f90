@@ -240,10 +240,10 @@ contains
         call obj%set_timeout_threshold(0.01)
 
         ! Start the timing
-        call obj%start_timing("test_timeout")
+        call obj%start_timing()
         call burn_time()
         
-        call obj%ckeck_timeout()
+        call obj%check_timeout("test_timeout")
 
         ! Ensure the warning was made
         if (.not.obj%has_warning_occurred()) then

@@ -330,7 +330,7 @@ contains
         integer(int32) :: n, dummy
 
         ! Write the error message to the command line
-        if (.not.this%m_suppressPrinting) then
+        if (.not.(this%m_suppressPrinting).and.(this_image() == 1)) then
             print *, ""
             print '(A)', "***** ERROR *****"
             print '(A)', "Function: " // fcn
@@ -395,7 +395,7 @@ contains
         integer(int32) :: n
 
         ! Write the warning message to the command line
-        if (.not.this%m_suppressPrinting) then
+        if (.not.(this%m_suppressPrinting).and.(this_image() == 1)) then
             print *, ""
             print '(A)', "***** WARNING *****"
             print '(A)', "Function: " // fcn
@@ -447,15 +447,17 @@ contains
         call idate(date)
 
         ! Write the error information
-        write(fid, '(A)') ""
-        write(fid, '(A)') "***** ERROR *****"
-        write(fid, '(I0AI0AI0AI0AI0AI0)') date(1), "/", date(2), "/", date(3), &
-            "; ", time(1), ":", time(2), ":", time(3)
-        write(fid, '(A)') "Function: " // fcn
-        write(fid, '(AI0)') "Error Flag: ", flag
-        write(fid, '(A)') "Message:"
-        write(fid, '(A)') msg
-        write(fid, '(A)') ""
+        if (this_image() == 1) then
+            write(fid, '(A)') ""
+            write(fid, '(A)') "***** ERROR *****"
+            write(fid, '(I0AI0AI0AI0AI0AI0)') date(1), "/", date(2), "/", date(3), &
+                "; ", time(1), ":", time(2), ":", time(3)
+            write(fid, '(A)') "Function: " // fcn
+            write(fid, '(AI0)') "Error Flag: ", flag
+            write(fid, '(A)') "Message:"
+            write(fid, '(A)') msg
+            write(fid, '(A)') ""
+        end if
 
         ! Close the file
         close(fid)
