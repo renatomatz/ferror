@@ -36,7 +36,7 @@
 !!     print '(A)', "An error occurred in the following subroutine: " // &
 !!         err_mgr%get_error_fcn_name()
 !!     print '(A)', "The error message is: " // err_mgr%get_error_message()
-!!     print '(AI0)', "The error code is: ", err_mgr%get_error_flag()
+!!     print '(A, I0)', "The error code is: ", err_mgr%get_error_flag()
 !! contains
 !! 
 !! ! The purpose of this subroutine is to simply trigger an error condition.
@@ -334,7 +334,7 @@ contains
             print *, ""
             print '(A)', "***** ERROR *****"
             print '(A)', "Function: " // fcn
-            print '(AI0)', "Error Flag: ", flag
+            print '(A, I0)', "Error Flag: ", flag
             print '(A)', "Message:"
             print '(A)', msg
             print *, ""
@@ -399,7 +399,7 @@ contains
             print *, ""
             print '(A)', "***** WARNING *****"
             print '(A)', "Function: " // fcn
-            print '(AI0)', "Warning Flag: ", flag
+            print '(A, I0)', "Warning Flag: ", flag
             print '(A)', "Message:"
             print '(A)', msg
             print *, ""
@@ -450,10 +450,11 @@ contains
         if (this_image() == 1) then
             write(fid, '(A)') ""
             write(fid, '(A)') "***** ERROR *****"
-            write(fid, '(I0AI0AI0AI0AI0AI0)') date(1), "/", date(2), "/", date(3), &
+            write(fid, '(I0, A, I0, A, I0, A, I0, A, I0, A, I0)') &
+                date(1), "/", date(2), "/", date(3), &
                 "; ", time(1), ":", time(2), ":", time(3)
             write(fid, '(A)') "Function: " // fcn
-            write(fid, '(AI0)') "Error Flag: ", flag
+            write(fid, '(A, I0)') "Error Flag: ", flag
             write(fid, '(A)') "Message:"
             write(fid, '(A)') msg
             write(fid, '(A)') ""
