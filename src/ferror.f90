@@ -3,7 +3,7 @@
 !> @mainpage
 !!
 !! @section intro_sec Introduction
-!! FERROR is a library to assist with error handling in Fortran projects.  The 
+!! FERROR is a library to assist with error handling in Fortran projects.  The
 !! error handling capabilities also have been extended to be called from C
 !! thereby providing both an error handling mechanism for C projects as well as
 !! allowing C interop with Fortran projects that use this library to handle
@@ -17,43 +17,43 @@
 !!     use ferror
 !!     use, intrinsic :: iso_fortran_env, only : int32
 !!     implicit none
-!! 
+!!
 !!     ! Variables
 !!     type(errors) :: err_mgr
-!! 
+!!
 !!     ! Ensure the error reporting doesn't terminate the application.  The default
 !!     ! behavior terminates the application.
 !!     call err_mgr%set_exit_on_error(.false.)
-!! 
+!!
 !!     ! Don't print the error message to the command line.  The default behavior
 !!     ! prints the error information to the command line.
 !!     call err_mgr%set_suppress_printing(.true.)
-!! 
+!!
 !!     ! Call the routine that causes the error
 !!     call causes_error(err_mgr)
-!! 
+!!
 !!     ! Print the error information
 !!     print '(A)', "An error occurred in the following subroutine: " // &
 !!         err_mgr%get_error_fcn_name()
 !!     print '(A)', "The error message is: " // err_mgr%get_error_message()
 !!     print '(A, I0)', "The error code is: ", err_mgr%get_error_flag()
 !! contains
-!! 
+!!
 !! ! The purpose of this subroutine is to simply trigger an error condition.
 !! subroutine causes_error(err)
 !!     ! Arguments
 !!     class(errors), intent(inout) :: err
-!! 
+!!
 !!     ! Define an error flag
 !!     integer(int32), parameter :: error_flag = 200
-!! 
+!!
 !!     ! Trigger the error condition
 !!     call err%report_error(&
 !!         "causes_error", &                   ! The subroutine or function name
 !!         "This is a test error message.", &  ! The error message.
 !!         error_flag)                         ! The error flag
 !! end subroutine
-!! 
+!!
 !! end program
 !! @endcode
 !!
@@ -66,9 +66,9 @@
 !! @endcode
 !!
 !! @par
-!! The above program also creates a log file.  The log file is titled 
-!! error_log.txt by default, but can be named whatever by the user.  The 
-!! contents of the file written from the above program are as follows.  
+!! The above program also creates a log file.  The log file is titled
+!! error_log.txt by default, but can be named whatever by the user.  The
+!! contents of the file written from the above program are as follows.
 !! @code{.txt}
 !! ***** ERROR *****
 !! 1/2/2018; 16:49:40
@@ -83,7 +83,7 @@
 !! the end of the file.
 !!
 !! @par
-!! The same example above can be written in C.  The C implementation is as 
+!! The same example above can be written in C.  The C implementation is as
 !! follows.
 !! @code{.c}
 !! #include <stdio.h>
@@ -202,7 +202,7 @@ module ferror
         procedure, public :: report_warning => er_report_warning
         !> @brief Writes an error log file.
         procedure, public :: log_error => er_log_error
-        !> @brief Checks if a timeout has occured and reports it.
+        !> @brief Checks if an error has occured and reports it.
         procedure, public :: has_error_occurred => er_has_error_occurred
         !> @brief Resets the error status flag to false.
         procedure, public :: reset_error_status => er_reset_error_status
@@ -214,6 +214,8 @@ module ferror
         procedure, public :: start_timing => er_start_timing
         !> @brief Tests to see if a timeout has been encountered.
         procedure, public :: check_timeout => er_check_timeout
+        !> @brief Checks if an error or warning has occured and reports it.
+        procedure, public :: has_any_occurred => er_has_any_occurred
         !> @brief Resets the start_time and last_check_time values to -1.0
         procedure, public :: reset_timeout => er_reset_timeout
         !> @brief Resets the start_time and last_check_time values to -1.0
@@ -240,13 +242,13 @@ module ferror
         !! throw an error if a timeout happens.
         procedure, public :: get_timeout_is_error => er_get_timeout_is_error
         !> @brief Sets a logical value determining if the application should
-        !! throw an error if a timeout happens. If set to false, a warning 
+        !! throw an error if a timeout happens. If set to false, a warning
         !! is reported.
         procedure, public :: set_timeout_is_error => er_set_timeout_is_error
-        !> @brief Gets a logical value determining if printing of error and 
+        !> @brief Gets a logical value determining if printing of error and
         !! warning messages should be suppressed.
         procedure, public :: get_suppress_printing => er_get_suppress_printing
-        !> @brief Sets a logical value determining if printing of error and 
+        !> @brief Sets a logical value determining if printing of error and
         !! warning messages should be suppressed.
         procedure, public :: set_suppress_printing => er_set_suppress_printing
         !> @brief Gets the currently error message.
@@ -317,7 +319,7 @@ contains
     !!  passed to provide information to the clean-up routine.
     !!
     !! @par Remarks
-    !! The default behavior prints an error message, appends the supplied 
+    !! The default behavior prints an error message, appends the supplied
     !! information to a log file, and terminates the program.
     subroutine er_report_error(this, fcn, msg, flag, obj)
         ! Arguments
@@ -474,7 +476,7 @@ contains
         logical :: x
         x = this%m_foundError
     end function
-    
+
 ! ------------------------------------------------------------------------------
     !> @brief Resets the error status flag to false, and the current error flag
     !! to zero.
@@ -498,7 +500,7 @@ contains
         logical :: x
         x = this%m_foundWarning
     end function
-    
+
 ! ------------------------------------------------------------------------------
     !> @brief Resets the warning status flag to false, and the current warning
     !! flag to zero.
@@ -575,7 +577,18 @@ contains
         this%m_lastCheckTime = now
 
     end subroutine
-    
+
+! ------------------------------------------------------------------------------
+    !> @brief Tests to see if an error or warning has occurred.
+    !!
+    !! @param[in] this The errors object.
+    !! @return Returns true if an error or warning has occurred; else, false.
+    pure function er_has_any_occurred(this) result(x)
+        class(errors), intent(in) :: this
+        logical :: x
+        x = (this%has_error_occurred().or.this%has_warning_occurred())
+    end function
+
 ! ------------------------------------------------------------------------------
     !> @brief Resets the start and last_check times to zero.
     !!
@@ -587,7 +600,7 @@ contains
         this%m_startTime = -1.0
         this%m_lastCheckTime = -1.0
     end subroutine
-    
+
 ! ------------------------------------------------------------------------------
     !> @brief Returns if the timeout is set up
     !!
@@ -631,7 +644,7 @@ contains
         integer(int32) :: x
         x = this%m_timeoutFlag
     end function
-    
+
 ! ------------------------------------------------------------------------------
     !> @brief Sets the current timeout flag.
     !!
@@ -642,7 +655,7 @@ contains
         integer(int32) :: x
         this%m_timeoutFlag = x
     end subroutine
-    
+
 ! ------------------------------------------------------------------------------
     !> @brief Gets the current timeout threshold.
     !!
@@ -653,24 +666,24 @@ contains
         real :: x
         x = this%m_timeoutThreshold
     end function
-    
+
 ! ------------------------------------------------------------------------------
     !> @brief Sets the current timeout threshold.
     !!
     !! @param[in] this The errors object.
-    !! @return The current timeout threshold.
+    !! @param[in] x The new timeout threshold.
     subroutine er_set_timeout_threshold(this, x)
         class(errors), intent(inout) :: this
         real :: x
         this%m_timeoutThreshold = x
     end subroutine
-    
+
 ! ------------------------------------------------------------------------------
     !> @brief Gets a logical value determining if the application should be
     !! terminated when an error is encountered.
     !!
     !! @param[in] this The errors object.
-    !! @return Returns true if the application should be terminated; else, 
+    !! @return Returns true if the application should be terminated; else,
     !!  false.
     pure function er_get_exit_on_error(this) result(x)
         class(errors), intent(in) :: this
@@ -692,11 +705,11 @@ contains
     end subroutine
 
 ! ------------------------------------------------------------------------------
-    !> @brief Gets a logical value determining if the application should 
+    !> @brief Gets a logical value determining if the application should
     !! throw an error in case of a timeout
     !!
     !! @param[in] this The errors object.
-    !! @return Returns true if the application should throw an error at 
+    !! @return Returns true if the application should throw an error at
     !! timeout; else, false.
     pure function er_get_timeout_is_error(this) result(x)
         class(errors), intent(in) :: this
@@ -709,7 +722,7 @@ contains
     !! throw an error in case of a timeout
     !!
     !! @param[in,out] this The errors object.
-    !! @param[in] x Set to true if the application should report an error when 
+    !! @param[in] x Set to true if the application should report an error when
     !! an timeout happens; else, false.
     subroutine er_set_timeout_is_error(this, x)
         class(errors), intent(inout) :: this
@@ -722,7 +735,7 @@ contains
     !! messages should be suppressed.
     !!
     !! @param[in] this The errors object.
-    !! @return True if message printing should be suppressed; else, false to 
+    !! @return True if message printing should be suppressed; else, false to
     !!  allow printing.
     pure function er_get_suppress_printing(this) result(x)
         class(errors), intent(in) :: this
