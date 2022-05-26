@@ -174,7 +174,7 @@ module ferror
         !> Suppress printing of error and warning messages.
         logical :: m_suppressPrinting = .false.
         !> Threshold which, if passed, will cause a timeout.
-        real :: m_timeoutThreshold = -1.0
+        real :: m_timeoutThreshold = huge(1.0)
         !> CPU time of call to the start() method.
         real :: m_startTime = -1.0
         !> CPU time of last call to the check_timeout() method.
@@ -539,20 +539,12 @@ contains
     !! updates the last_check_time attribute.
     !!
     !! @param[in] this The errors object.
-    subroutine er_check_timeout(this, fcn, opt_check)
+    subroutine er_check_timeout(this, fcn)
         class(errors), intent(inout) :: this
         character(len=*), intent(in) :: fcn
-        logical, optional, intent(in) :: opt_check
 
         real :: now
         integer :: n
-
-        ! Evaluation is not lazy, must first check if the option is present
-        ! before accessing its value
-        if (present(opt_check)) then
-            if (opt_check.and.(.not.this%timeout_is_set())) &
-                return
-        end if
 
         if (.not.this%timeout_is_set()) call this%report_error(&
             this%m_tFunName, &
@@ -620,8 +612,7 @@ contains
         logical :: x
 
         x = (this%m_startTime >= 0.0) &
-            .and.(this%m_lastCheckTime >= 0.0) &
-            .and.(this%m_timeoutThreshold >= 0.0)
+            .and.(this%m_lastCheckTime >= 0.0)
     end function
 
 ! ------------------------------------------------------------------------------
