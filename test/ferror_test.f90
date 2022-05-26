@@ -47,7 +47,7 @@ contains
         type(errors) :: obj
         character(len = *), parameter :: fname = "test_filename.txt"
         character(len = :), allocatable :: check
-        
+
         ! Initialization
         rst = .true.
 
@@ -237,12 +237,12 @@ contains
         call obj%set_timeout_is_error(.false.)
 
         call obj%set_timeout_flag(200)
-        call obj%set_timeout_threshold(0.01)
+        call obj%set_timeout_threshold([0.0, 0.0, 0.01])
 
         ! Start the timing
         call obj%start_timing()
         call burn_time()
-        
+
         call obj%check_timeout("test_timeout")
 
         ! Ensure the warning was made

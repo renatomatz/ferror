@@ -143,6 +143,8 @@ module ferror
     implicit none
     private
 
+    real, dimension(3), parameter :: sec_weights = [3600, 60, 1]
+
     integer, parameter :: META_ERROR = 900
 
     public :: errors
@@ -537,12 +539,20 @@ contains
     !! updates the last_check_time attribute.
     !!
     !! @param[in] this The errors object.
-    subroutine er_check_timeout(this, fcn)
+    subroutine er_check_timeout(this, fcn, opt_check)
         class(errors), intent(inout) :: this
         character(len=*), intent(in) :: fcn
+        logical, optional, intent(in) :: opt_check
 
         real :: now
         integer :: n
+
+        ! Evaluation is not lazy, must first check if the option is present
+        ! before accessing its value
+        if (present(opt_check)) then
+            if (opt_check.and..not.this%timeout_is_set()) &
+                return
+        end if
 
         if (.not.this%timeout_is_set()) call this%report_error(&
             this%m_tFunName, &
@@ -663,8 +673,16 @@ contains
     !! @return The current timeout threshold.
     pure function er_get_timeout_threshold(this) result(x)
         class(errors), intent(in) :: this
-        real :: x
-        x = this%m_timeoutThreshold
+        real, dimension(3) :: x
+
+        integer :: i
+        real :: thresh_cpy
+
+        thresh_cpy = this%m_timeoutThreshold
+        do i=3,1,-1
+            x(i) = floor(thresh_cpy / sec_weights(i))
+            thresh_cpy = thresh_cpy - x(i)*sec_weights(i)
+        end do
     end function
 
 ! ------------------------------------------------------------------------------
@@ -674,8 +692,8 @@ contains
     !! @param[in] x The new timeout threshold.
     subroutine er_set_timeout_threshold(this, x)
         class(errors), intent(inout) :: this
-        real :: x
-        this%m_timeoutThreshold = x
+        real, dimension(3) :: x
+        this%m_timeoutThreshold = dot_product(x, sec_weights)
     end subroutine
 
 ! ------------------------------------------------------------------------------
