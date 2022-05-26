@@ -174,11 +174,11 @@ module ferror
         !> Suppress printing of error and warning messages.
         logical :: m_suppressPrinting = .false.
         !> Threshold which, if passed, will cause a timeout.
-        real :: m_timeoutThreshold
+        real :: m_timeoutThreshold = -1.0
         !> CPU time of call to the start() method.
-        real :: m_startTime
+        real :: m_startTime = -1.0
         !> CPU time of last call to the check_timeout() method.
-        real :: m_lastCheckTime
+        real :: m_lastCheckTime = -1.0
         !> The error message.
         character(len = :), allocatable :: m_errorMessage
         !> The warning message.
@@ -550,7 +550,7 @@ contains
         ! Evaluation is not lazy, must first check if the option is present
         ! before accessing its value
         if (present(opt_check)) then
-            if (opt_check.and..not.this%timeout_is_set()) &
+            if (opt_check.and.(.not.this%timeout_is_set())) &
                 return
         end if
 
@@ -619,7 +619,9 @@ contains
         class(errors), intent(inout) :: this
         logical :: x
 
-        x = (this%m_startTime >= 0.0).and.(this%m_lastCheckTime >= 0.0)
+        x = (this%m_startTime >= 0.0) &
+            .and.(this%m_lastCheckTime >= 0.0) &
+            .and.(this%m_timeoutThreshold >= 0.0)
     end function
 
 ! ------------------------------------------------------------------------------
